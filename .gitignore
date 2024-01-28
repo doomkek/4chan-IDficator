@@ -1,0 +1,6 @@
+log.txt
+bin
+obj
+.vscode
+data.db
+Utils.cs
