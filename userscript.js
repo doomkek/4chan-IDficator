@@ -23,6 +23,7 @@
 
 
 (function () {
+    // apply IDs to their related posts
     function applyShitposts(data) {
         if (data.length == 0)
             return;
@@ -38,6 +39,7 @@
         }
     }
 
+    // apply userID (hash) specific post  
     function applyId(postId, hash) {
         var post = document.getElementById("pi" + postId).getElementsByClassName('postNum')[0];
 
@@ -49,13 +51,16 @@
         a.style.marginLeft = "4px";
         a.style.cursor = "pointer";
 
+        // event handler when user hove mouse over ID to show how much posts user with that ID made
         a.onmouseenter = function (e) {
             var posts = document.getElementsByClassName(hash);
             a.title = posts.length + (posts.length > 1 ? " posts" : " post") + " by this ID";
         };
 
+        // clear after event above finished, probably useless
         a.onmouseleave = function (e) { a.title = ""; };
 
+        // event handler when user click ID to highlight all posts with that ID
         a.onclick = function (e) {
             var posts = document.getElementsByClassName(e.target.className);
             for (var i = 0; i < posts.length; i++) {
@@ -65,9 +70,11 @@
             }
         };
 
+        // insert ID element after postID element
         post.insertAdjacentElement('afterend', a);
     }
-
+    
+    // chatGPT get thread ID from current URL in address bar
     function getThreadId() {
         const parsedUrl = new URL(window.location.href);
         const pathSegments = parsedUrl.pathname.split('/');
@@ -76,8 +83,7 @@
         return extractedPart;
     }
 
-    function getPostId(id) { return "pi" + id.substring(3); }
-
+    // chatGPT make a request to following URL 
     function getShitposts(threadId) {
         const url = `https://giggers.moe/getShitposts/${threadId}`;
 
@@ -93,6 +99,7 @@
             .catch(error => { console.error('Error:', error); });
     }
 
+    // chatGPT make a request to following URL 
     function addPost(threadId, postId) {
         const url = `https://giggers.moe/addPost?threadId=${threadId}&postId=${postId}`;
 
@@ -114,16 +121,18 @@
             });
     }
 
-    // event handlers for 4chan-x
+    // event handler for 4chan-x when thread updates
     document.addEventListener('ThreadUpdate', function (e) {
         if (e.detail.newPosts.length > 0)
             getShitposts(getThreadId());
     });
+    // event handler for 4chan-x when user made a post 
     document.addEventListener('QRPostSuccessful', function (e) { addPost(e.detail.threadID, e.detail.postID); });
 
-    // event handlers for default 4chan script
+    // event handlers for native 4chan extension
     document.addEventListener('4chanThreadUpdated', function (e) { getShitposts(getThreadId()); });
     document.addEventListener('4chanQRPostSuccess', function (e) { addPost(e.detail.threadId, e.detail.postId); });
-
+ 
+    // after thread is loaded, initial load of all IDs
     getShitposts(getThreadId());
 })();
