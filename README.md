@@ -16,10 +16,10 @@ If you are not using 4chan-x make sure native extension is **NOT** disabled in s
 # Brief description of how it works
 - When you load thread, script will make a request to domain `https://giggers.moe/getShitposts/{threadID}` to fetch all existing posts and their IDs. 
 - When you make a post, script will make a request to `https://giggers.moe/addPost?threadId=${threadId}&postId=${postId}` to save relation between your postID and ID. 
-- User IP address and `threadID` is used to create a hash (ID) that you will see on user post 
+- User IP address + `threadID` is used to create a big 512bit token, then that token + `threadID` + `secret` variable is used to create user hash (ID) that you will see on user post, very safe.
 ![image](https://github.com/doomkek/4chanIdificator/assets/141933494/a51a8427-b099-4e98-b2f9-266622bd7b6f)
 ~~Unfortunately I have to hide hash implementation `Utils.GenerateHash(threadId, clientIpAddress);` because if people know how hash is made you can bruteforce real IP address from ID.~~ <br>
-Now hashing function is available for everyone to inspect. Does that mean your ID is in danger of being reversed back to IP? no, I've made high IQ move and added secret variable that is stored on the server, without it you can't reverse this hash.
+Now hashing function is available for everyone to inspect. Does that mean your ID is in danger of being reversed back to IP? No, now secret variable that is stored on the server was added, without it you can't reverse this hash.
 
 # Privacy
 Server and Web service on `giggers.moe` does not log IP address, unfortunately there is no way to prove it and you'd have to believe me with this one. <br>
