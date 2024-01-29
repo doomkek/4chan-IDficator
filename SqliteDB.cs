@@ -78,7 +78,7 @@ CREATE TABLE "Shitposts" (
         }
     }
 
-    public async Task<T?> QuerySingleAsync<T>(string sql)
+    public async Task<T> QuerySingleAsync<T>(string sql)
     {
         try
         {
@@ -92,13 +92,13 @@ CREATE TABLE "Shitposts" (
         }
     }
 
-    public async Task<IEnumerable<T>> QueryAsync<T>(string sql)
+    public async Task<IEnumerable<T>> QueryAsync<T>(string sql, object param)
     {
         try
         {
             await mutex.WaitAsync();
             log.LogDebug(sql);
-            return await connection.QueryAsync<T>(sql);
+            return await connection.QueryAsync<T>(sql, param);
         }
         finally
         {
@@ -106,7 +106,7 @@ CREATE TABLE "Shitposts" (
         }
     }
 
-    string buildSqlCommand(string sql, string? predicate = null, string? orderBy = null, int? from = null, int? amount = null)
+    string buildSqlCommand(string sql, string predicate = null, string orderBy = null, int? from = null, int? amount = null)
     {
         StringBuilder sb = new StringBuilder();
         sb.Append(sql);

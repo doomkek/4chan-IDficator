@@ -1,4 +1,5 @@
 using System.Net;
+using System.Security.AccessControl;
 using IDificator;
 using Microsoft.AspNetCore.Mvc;
 using Serilog;
@@ -31,17 +32,13 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 app.UseCors("Default");
 
-// Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
     app.UseExceptionHandler("/Error");
-    // The default HSTS value is 30 days. You may want to change this for production scenarios, see https://aka.ms/aspnetcore-hsts.
     app.UseHsts();
 }
 
 app.UseHttpsRedirection();
-
-app.Map("/ping", () => "pong");
 
 app.MapPost("/addPost", async (HttpContext context, [FromServices] DB db, [FromQuery] long threadId, [FromQuery] long postId) =>
 {
@@ -54,20 +51,27 @@ app.MapPost("/addPost", async (HttpContext context, [FromServices] DB db, [FromQ
     {
         IPAddress.Parse(clientIpAddress);
     }
-    catch (Exception ex)
+    catch
     {
-        Log.Error(ex.ToString());
         return new ReturnMessage(500, "Failed to parse IP address");
     }
 
-    string userHash = Utils.GenerateHash(threadId, clientIpAddress);
+    string userToken = Utils.GenerateToken(threadId, clientIpAddress, config.GetValue<string>("Secret"));
+    string userHash = Utils.GenerateHash(threadId, userToken);
 
-    await db.ExecuteAsync("INSERT INTO Shitposts VALUES (@threadId, @postId, @userHash)", new { threadId, postId, userHash });
+    try
+    {
+        await db.ExecuteAsync("INSERT INTO Shitposts VALUES (@threadId, @postId, @userHash)", new { threadId, postId, userHash });
+    }
+    catch
+    {
+        return new ReturnMessage(500, "");
+    }
 
     return new ReturnMessage(200, userHash);
 });
 
-app.MapGet("/getShitposts/{threadId}", async ([FromServices] DB db, [FromRoute] string threadId) => await db.QueryAsync<Shitpost>($"SELECT PostId, UserHash FROM SHITPOSTS WHERE ThreadId = '{threadId}'"));
+app.MapGet("/getShitposts/{threadId}", async ([FromServices] DB db, [FromRoute] string threadId) => await db.QueryAsync<Shitpost>($"SELECT PostId, UserHash FROM SHITPOSTS WHERE ThreadId = @threadId", new { threadId }));
 
 try
 {
