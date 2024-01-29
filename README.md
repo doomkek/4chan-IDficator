@@ -5,7 +5,7 @@ Why? Its up to you.
 This project was done in few hours, its as basic as it gets, currently I just want to see if people are interested in using it.
 
 # Installation
-You need to install userscript manager (like Violentmonkey), create new script and copy [script](userscript.js) content. <br>
+You need to install userscript manager (like Violentmonkey), create new script and copy [script](userscript.js) or install from [greasyfork](https://greasyfork.org/en/scripts/485980-4chan-idficator).<br>
 You can read (or press skip lmao) this script even if you don't know what you are looking at, its very short, and have comments to explain important parts. <br>
 
 It is compatible with 4chan-x. <br>
@@ -18,7 +18,8 @@ If you are not using 4chan-x make sure native extension is **NOT** disabled in s
 - When you make a post, script will make a request to `https://giggers.moe/addPost?threadId=${threadId}&postId=${postId}` to save relation between your postID and ID. 
 - User IP address and `threadID` is used to create a hash (ID) that you will see on user post 
 ![image](https://github.com/doomkek/4chanIdificator/assets/141933494/a51a8427-b099-4e98-b2f9-266622bd7b6f)
-Unfortunately I have to hide hash implementation `Utils.GenerateHash(threadId, clientIpAddress);` because if people know how hash is made you can bruteforce real IP address from ID.
+~~Unfortunately I have to hide hash implementation `Utils.GenerateHash(threadId, clientIpAddress);` because if people know how hash is made you can bruteforce real IP address from ID.~~ <br>
+Now hashing function is available for everyone to inspect. Does that mean your ID is in danger of being reversed back to IP? no, I've made high IQ move and added secret variable that is stored on the server, without it you can't reverse this hash.
 
 # Privacy
 Server and Web service on `giggers.moe` does not log IP address, unfortunately there is no way to prove it and you'd have to believe me with this one. <br>
