@@ -29,6 +29,8 @@ builder.Services.AddCors(options =>
     });
 });
 
+ builder.Services.AddHostedService<DbMaintenance>();
+
 var app = builder.Build();
 app.UseCors("Default");
 

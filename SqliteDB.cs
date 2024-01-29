@@ -92,7 +92,7 @@ CREATE TABLE "Shitposts" (
         }
     }
 
-    public async Task<IEnumerable<T>> QueryAsync<T>(string sql, object param)
+    public async Task<IEnumerable<T>> QueryAsync<T>(string sql, object param = null)
     {
         try
         {
