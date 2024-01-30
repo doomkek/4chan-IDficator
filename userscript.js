@@ -1,9 +1,9 @@
 // ==UserScript==
-// @name        IDficator
+// @name        4chan-IDficator
 // @namespace   Violentmonkey Scripts
-// @match       https://boards.4chan.org/vg/thread/463437991*
+// @match       *://boards.4chan.org/*
 // @grant       none
-// @version     1.0
+// @version     0.2
 // @author      Doomkek
 // @include     http://boards.4chan.org/*
 // @include     https://boards.4chan.org/*
@@ -18,13 +18,16 @@
 // @include     http://www.4channel.org/*
 // @include     https://www.4channel.org/*
 // @connect     https://giggers.moe
-// @description 1/28/2024, 3:30:15 PM
+// @description Allow users to bring IDs into boards that does not have them.
+// @license     MIT
+// @downloadURL https://update.greasyfork.org/scripts/485980/4chan-IDficator.user.js
+// @updateURL   https://update.greasyfork.org/scripts/485980/4chan-IDficator.meta.js
 // ==/UserScript==
 
 
 (function () {
-    var SERVICE_URL = 'http://localhost:5000';
-    var TOKEN = '';
+    var SERVICE_URL = 'https://giggers.moe';
+    var USE_ID = true;
 
     function applyShitposts(data) {
         if (data.length == 0)
@@ -84,69 +87,56 @@
     function getShitposts(threadId) {
         const url = `${SERVICE_URL}/getShitposts/${threadId}`;
 
-        fetch(url, {
-            method: 'GET',
-            headers: { 'Content-Type': 'application/json' },
-        }).then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! Status: ${response.status}`);
-            }
-            return response.json();
-        }).then(data => { applyShitposts(data); })
-            .catch(error => { console.error('Error:', error); });
-    }
-
-    async function authorize(threadId) {
-        const url = `${SERVICE_URL}/authorize?threadId=${threadId}`;
-
-        let token;
-
-        await fetch(url, { method: 'POST' }).then(r => r = resp.json().message);
-
-        return token;
+        fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } })
+            .then(response => {
+                if (!response.ok)
+                    throw new Error(`HTTP error! Status: ${response.status}`);
+                return response.json();
+            }).then(data => { applyShitposts(data); });
     }
 
     function addPost(threadId, postId) {
-        const url = `${SERVICE_URL}/addPost?threadId=${threadId}&postId=${postId}`;
+        if (!USE_ID)
+            return;
 
-        fetch(url, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', 'genkek-token' : TOKEN },
-        })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! Status: ${response.status}`);
-                }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Success:', data);
-            })
-            .catch(error => {
-                console.error('Error:', error);
-            });
+        const url = `${SERVICE_URL}/addPost?threadId=${threadId}&postId=${postId}`;
+        fetch(url, { method: 'POST' });
     }
 
     document.addEventListener('ThreadUpdate', function (e) {
         if (e.detail.newPosts.length == 0)
             return;
+
         getShitposts(getThreadId());
     });
-
     document.addEventListener('4chanThreadUpdated', function (e) { getShitposts(getThreadId()); });
 
-    document.addEventListener('QRPostSuccessful', async function (e) {
-        if (TOKEN.length == 0) {
-            await authorize();
-        }
-        addPost(e.detail.threadID, e.detail.postID);
+    document.addEventListener('QRPostSuccessful', function (e) { addPost(e.detail.threadID, e.detail.postID); });
+    document.addEventListener('4chanQRPostSuccess', function (e) { addPost(e.detail.threadId, e.detail.postId); });
+
+    // need for tracking non 4chan-x QR being added to the DOM
+    var doom = function (e) {
+        if (e.target.id != "quickReply")
+            return;
+
+        var cbID = document.createElement('span');
+        cbID.id = 'cbID';
+        cbID.innerHTML = '<label>[<input type="checkbox" checked="true" name="cbID">Use ID?]</label>';
+        cbID.addEventListener("change", function (e) { USE_ID = cbID.querySelector('input').checked; });
+        e.target.querySelector('#qrSpoiler').insertAdjacentElement('afterend', cbID);
+    };
+
+    document.addEventListener('QRDialogCreation', function (e) {
+        var cbID = document.createElement('label');
+        cbID.id = 'cbID';
+        cbID.innerHTML = '<input type="checkbox" checked="true" name="cbID">Use ID?</input>';
+        cbID.addEventListener("change", function (e) { USE_ID = cbID.querySelector('input').checked; });
+
+        e.target.querySelector('.move').appendChild(cbID);
+        document.getElementsByTagName('body')[0].removeEventListener('DOMNodeInserted', doom);
     });
-    document.addEventListener('4chanQRPostSuccess', function (e) {
-        if (TOKEN.length == 0) {
-            await authorize();
-        }
-        addPost(e.detail.threadId, e.detail.postId);
-    });
+
+    document.getElementsByTagName('body')[0].addEventListener("DOMNodeInserted", doom);
 
     getShitposts(getThreadId());
 })();
