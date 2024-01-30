@@ -26,5 +26,6 @@ Server and Web service on `giggers.moe` does not log IP address, unfortunately t
 This is how database looks like <br>
 ![image](https://github.com/doomkek/4chanIdificator/assets/141933494/b573176b-5b93-450c-b1f8-96f7cd86be6b)
 
-Currently DB stores everything indefinetely, later on I will implement scheduled task that will drop old records from dead threads.
+~~Currently DB stores everything indefinetely, later on I will implement scheduled task that will drop old records from dead threads.~~
+Not anymore, but current implementation is retarded, soon there will be a better implementation that will check every thread in the DB if its dead or not.
 
