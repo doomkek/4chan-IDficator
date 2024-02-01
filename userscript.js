@@ -3,7 +3,7 @@
 // @namespace   Violentmonkey Scripts
 // @match       *://boards.4chan.org/*
 // @grant       none
-// @version     0.2
+// @version     0.3
 // @author      Doomkek
 // @include     http://boards.4chan.org/*
 // @include     https://boards.4chan.org/*
@@ -20,6 +20,7 @@
 // @connect     https://giggers.moe
 // @description Allow users to bring IDs into boards that does not have them.
 // @license     MIT
+// @homepageURL https://github.com/doomkek/4chan-IDficator
 // @downloadURL https://update.greasyfork.org/scripts/485980/4chan-IDficator.user.js
 // @updateURL   https://update.greasyfork.org/scripts/485980/4chan-IDficator.meta.js
 // ==/UserScript==
@@ -52,6 +53,7 @@
         a.className = hash;
         a.innerText = hash;
         a.style.backgroundColor = "#" + hash;
+        a.style.color = getContrastColor(hash);
         a.style.marginLeft = "4px";
         a.style.cursor = "pointer";
 
@@ -79,13 +81,22 @@
         const pathSegments = parsedUrl.pathname.split('/');
         const lastPart = pathSegments.filter(segment => segment !== '').pop();
         const extractedPart = lastPart.split('#')[0];
-        return extractedPart;
+        return { boardId: pathSegments[1], threadId: extractedPart };
     }
 
-    function getPostId(id) { return "pi" + id.substring(3); }
+    function getContrastColor(hexColor) {
+        const hex = hexColor.slice(1);
+        const r = parseInt(hex.slice(0, 2), 16);
+        const g = parseInt(hex.slice(2, 4), 16);
+        const b = parseInt(hex.slice(4, 6), 16);
+        const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+        const textColor = luminance > 0.5 ? '#000000' : '#FFFFFF';
 
-    function getShitposts(threadId) {
-        const url = `${SERVICE_URL}/getShitposts/${threadId}`;
+        return textColor;
+    }
+
+    function getShitposts(boardId, threadId) {
+        const url = `${SERVICE_URL}/getShitposts/${boardId}/${threadId}`;
 
         fetch(url, { method: 'GET', headers: { 'Content-Type': 'application/json' } })
             .then(response => {
@@ -95,11 +106,11 @@
             }).then(data => { applyShitposts(data); });
     }
 
-    function addPost(threadId, postId) {
+    function addPost(boardId, threadId, postId) {
         if (!USE_ID)
             return;
 
-        const url = `${SERVICE_URL}/addPost?threadId=${threadId}&postId=${postId}`;
+        const url = `${SERVICE_URL}/addPost?threadId=${threadId}&postId=${postId}&boardId=${boardId}`;
         fetch(url, { method: 'POST' });
     }
 
@@ -107,12 +118,12 @@
         if (e.detail.newPosts.length == 0)
             return;
 
-        getShitposts(getThreadId());
+        getShitposts(getThreadId().boardId, getThreadId().threadId);
     });
-    document.addEventListener('4chanThreadUpdated', function (e) { getShitposts(getThreadId()); });
+    document.addEventListener('4chanThreadUpdated', function (e) { getShitposts(getThreadId().boardId, getThreadId().threadId); });
 
-    document.addEventListener('QRPostSuccessful', function (e) { addPost(e.detail.threadID, e.detail.postID); });
-    document.addEventListener('4chanQRPostSuccess', function (e) { addPost(e.detail.threadId, e.detail.postId); });
+    document.addEventListener('QRPostSuccessful', function (e) { addPost(e.detail.boardID, e.detail.threadID, e.detail.postID); });
+    document.addEventListener('4chanQRPostSuccess', function (e) { addPost(e.detail.boardId, e.detail.threadId, e.detail.postId); });
 
     // need for tracking non 4chan-x QR being added to the DOM
     var doom = function (e) {
@@ -138,5 +149,5 @@
 
     document.getElementsByTagName('body')[0].addEventListener("DOMNodeInserted", doom);
 
-    getShitposts(getThreadId());
+    getShitposts(getThreadId().boardId, getThreadId().threadId);
 })();
