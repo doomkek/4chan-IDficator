@@ -61,12 +61,26 @@ app.MapPost("/addPost", async (HttpContext context, [FromServices] DB db, [FromQ
         return new ReturnMessage(500, "Failed to parse IP address");
     }
 
-    await Task.Delay(config.GetValue<int>("delayBeforeValidate")); // need to wait before checking 4chan reply since it takes time for new post to appear
-    var resp = await WR.GetRequestAsync<ChanResponse>($"https://a.4cdn.org/{boardId}/thread/{threadId}.json");
-    if (resp == null || resp.IsArchived)
+    int retries = 0;
+    Post post = null;
+
+    while (retries < 5)
+    {
+        await Task.Delay(config.GetValue<int>("delayBeforeValidate")); // need to wait before checking 4chan reply since it takes time for new post to appear
+        var resp = await WR.GetRequestAsync<ChanResponse>($"https://a.4cdn.org/{boardId}/thread/{threadId}.json");
+        if (resp == null || resp.IsArchived)
+            return new ReturnMessage(200, "");
+
+        post = resp.posts.SingleOrDefault(p => p.no == postId);
+        if (post == null)
+            Log.Information("Failed to validate post {postId}, retryint {retries}/5", postId, retries);
+
+        retries++;
+    }
+
+    if (post == null)
         return new ReturnMessage(200, "");
 
-    var post = resp.posts.SingleOrDefault(p => p.no == postId);
     var postDT = DateTime.UnixEpoch.AddSeconds(post.time);
     var serverDT = DateTime.UtcNow.AddMilliseconds(-config.GetValue<int>("delayBeforeValidate"));
 
