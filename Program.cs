@@ -74,6 +74,8 @@ app.MapPost("/addPost", async (HttpContext context, [FromServices] DB db, [FromQ
         post = resp.posts.SingleOrDefault(p => p.no == postId);
         if (post == null)
             Log.Information("Failed to validate post {postId}, retryint {retries}/5", postId, retries);
+        else
+            break;
 
         retries++;
     }
