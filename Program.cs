@@ -29,7 +29,7 @@ builder.Services.AddCors(options =>
     });
 });
 
- builder.Services.AddHostedService<DbMaintenance>();
+builder.Services.AddHostedService<DbMaintenance>();
 
 var app = builder.Build();
 app.UseCors("Default");
@@ -42,7 +42,7 @@ if (!app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
-app.MapPost("/addPost", async (HttpContext context, [FromServices] DB db, [FromQuery] long threadId, [FromQuery] long postId) =>
+app.MapPost("/addPost", async (HttpContext context, [FromServices] DB db, [FromQuery] long threadId, [FromQuery] long postId, [FromQuery] string boardId = "vg") =>
 {
     string clientIpAddress = context.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? context.Connection.RemoteIpAddress!.ToString();
 
@@ -63,7 +63,7 @@ app.MapPost("/addPost", async (HttpContext context, [FromServices] DB db, [FromQ
 
     try
     {
-        await db.ExecuteAsync("INSERT INTO Shitposts VALUES (@threadId, @postId, @userHash)", new { threadId, postId, userHash });
+        await db.ExecuteAsync("INSERT INTO Shitposts VALUES (@threadId, @postId, @boardId, @userHash)", new { threadId, postId, boardId, userHash });
     }
     catch
     {
@@ -73,7 +73,8 @@ app.MapPost("/addPost", async (HttpContext context, [FromServices] DB db, [FromQ
     return new ReturnMessage(200, userHash);
 });
 
-app.MapGet("/getShitposts/{threadId}", async ([FromServices] DB db, [FromRoute] string threadId) => await db.QueryAsync<Shitpost>($"SELECT PostId, UserHash FROM SHITPOSTS WHERE ThreadId = @threadId", new { threadId }));
+app.MapGet("/getShitposts/{threadId}", async ([FromServices] DB db, [FromRoute] string threadId) => await db.QueryAsync<Shitpost>($"SELECT PostId, UserHash FROM SHITPOSTS WHERE BoardId = @boardId and ThreadId = @threadId", new { boardId = "vg", threadId }));
+app.MapGet("/getShitposts/{boardId}/{threadId}", async ([FromServices] DB db, [FromRoute] string boardId, [FromRoute] string threadId) => await db.QueryAsync<Shitpost>($"SELECT PostId, UserHash FROM SHITPOSTS WHERE BoardId = @boardId and ThreadId = @threadId", new { boardId, threadId }));
 
 try
 {

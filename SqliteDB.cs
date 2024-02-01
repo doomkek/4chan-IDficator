@@ -23,8 +23,9 @@ public class DB
 CREATE TABLE "Shitposts" (
 	"ThreadId"	INTEGER NOT NULL,
 	"PostId"	INTEGER NOT NULL,
+    "BoardId"   TEXT NOT NULL,
     "UserHash"  TEXT NOT NULL,
-	UNIQUE("ThreadId","PostId")
+	UNIQUE("ThreadId", "PostId", "BoardID")
 );
 """;
 
