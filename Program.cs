@@ -61,10 +61,10 @@ app.MapPost("/addPost", async (HttpContext context, [FromServices] DB db, [FromQ
         return new ReturnMessage(500, "Failed to parse IP address");
     }
 
-    int retries = 0;
+    int retry = 1;
     Post post = null;
-
-    while (retries < 5)
+    //TODO: insert ID right now, validate later in background task, add new table 'ValidationQueue' with boardId, threadId, postId, postTS    
+    while (retry <= 5)
     {
         await Task.Delay(config.GetValue<int>("delayBeforeValidate")); // need to wait before checking 4chan reply since it takes time for new post to appear
         var resp = await WR.GetRequestAsync<ChanResponse>($"https://a.4cdn.org/{boardId}/thread/{threadId}.json");
@@ -73,18 +73,18 @@ app.MapPost("/addPost", async (HttpContext context, [FromServices] DB db, [FromQ
 
         post = resp.posts.SingleOrDefault(p => p.no == postId);
         if (post == null)
-            Log.Information("Failed to validate post {postId}, retryint {retries}/5", postId, retries);
+            Log.Information("Failed to validate post {postId}, retrying {retry}/5", postId, retry);
         else
             break;
 
-        retries++;
+        retry++;
     }
 
     if (post == null)
         return new ReturnMessage(200, "");
 
     var postDT = DateTime.UnixEpoch.AddSeconds(post.time);
-    var serverDT = DateTime.UtcNow.AddMilliseconds(-config.GetValue<int>("delayBeforeValidate"));
+    var serverDT = DateTime.UtcNow.AddMilliseconds(-(config.GetValue<int>("delayBeforeValidate") * retry));
 
     Log.Information("Velidating post {postId}, post DT {postDT:yyyy/MM/dd HH:mm:ss}, server DT {serverDT:yyyy/MM/dd HH:mm:ss}", postId, postDT, serverDT);
 

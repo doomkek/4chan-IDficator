@@ -3,6 +3,7 @@ using System.Text;
 
 public static class Utils
 {
+    //TODO: change hex into something more interesting, userscripts uses hex value as color
     public static string GenerateHash(long threadId, string token)
     {
         using SHA256 s = SHA256.Create();
