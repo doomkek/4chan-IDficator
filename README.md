@@ -6,7 +6,7 @@ This project was done in few hours, its as basic as it gets, currently I just wa
 
 # Installation
 You need to install userscript manager (like Violentmonkey), create new script and copy [script](userscript.js) or install from [greasyfork](https://greasyfork.org/en/scripts/485980-4chan-idficator).<br>
-You can read (or press skip lmao) this script even if you don't know what you are looking at, its very short, and have comments to explain important parts. <br>
+You can read (or press skip lmao) this script even if you don't know what you are looking at, ~~its very short~~, most important parts are `function getShitposts` and `function addPost`, these functions are responsible for communication with server, and there you can inspect what informations is being sent and received. <br>
 
 It is compatible with 4chan-x. <br>
 If you are not using 4chan-x make sure native extension is **NOT** disabled in settings.
