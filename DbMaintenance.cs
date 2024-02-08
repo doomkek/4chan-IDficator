@@ -20,18 +20,18 @@ public class DbMaintenance(IServiceProvider serviceProvider, ILogger<DbMaintenan
                 var db = scope.ServiceProvider.GetService<DB>();
                 var threads = await db.QueryAsync<(string boardId, string threadId)>("select BoardId, ThreadId from Shitposts group by ThreadId");
 
-                foreach (var t in threads)
+                foreach (var (boardId, threadId) in threads)
                 {
-                    log.LogInformation("Checking if thread '{thread}' is alive", $"{t.boardId}.{t.threadId}");
+                    log.LogInformation("Checking if thread '{thread}' is alive", $"{boardId}.{threadId}");
 
-                    var resp = await WebRequest.GetRequestAsync<ChanResponse>($"https://a.4cdn.org/{t.boardId}/thread/{t.threadId}.json");
+                    var resp = await WebRequest.GetRequestAsync<ChanResponse>($"https://a.4cdn.org/{boardId}/thread/{threadId}.json");
                     if (resp == null || resp.IsArchived)
                     {
-                        log.LogInformation("Thread '{thread}' is dead, deleting...", $"{t.boardId}.{t.threadId}");
-                        await db.ExecuteAsync($"delete from Shitposts where BoardId = '{t.boardId}' and ThreadId = '{t.threadId}'");
+                        log.LogInformation("Thread '{thread}' is dead, deleting...", $"{boardId}.{threadId}");
+                        await db.ExecuteAsync($"delete from Shitposts where BoardId = '{boardId}' and ThreadId = '{threadId}'");
                     }
                     else
-                        log.LogInformation("Thread '{thread}' is alive at {postCount} posts", $"{t.boardId}.{t.threadId}", resp.posts.Count);
+                        log.LogInformation("Thread '{thread}' is alive at {postCount} posts", $"{boardId}.{threadId}", resp.posts.Count);
                 }
 
                 log.LogInformation("Finish DB maintenance");
