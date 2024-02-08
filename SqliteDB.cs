@@ -27,6 +27,15 @@ CREATE TABLE "Shitposts" (
     "UserHash"  TEXT NOT NULL,
 	UNIQUE("ThreadId", "PostId", "BoardID")
 );
+
+CREATE TABLE "ValidationQueue" (
+    "BoardId"   TEXT NOT NULL,
+    "ThreadId"  INTEGER NOT NULL,
+    "PostId"    INTEGER NOT NULL,
+    "ServerTS"  INTEGER NOT NULL,
+    "Attempt"   INTEGER NOT NULL,
+	UNIQUE("ThreadId", "PostId", "BoardID")
+);
 """;
 
         ensureDbInitialized();
@@ -183,4 +192,17 @@ CREATE TABLE "Shitposts" (
             throw new Exception("Failed to initialize DB: " + ex.Message);
         }
     }
+}
+
+public class ValidationQueue
+{
+    public string BoardId { get; set; }
+    public int ThreadId { get; set; }
+    public int PostId { get; set; }
+    public int ServerTS { get; set; }
+    public int Attempt { get; set; }
+
+    public DateTime PostDateTime(int postTS) => DateTime.UnixEpoch.AddSeconds(postTS);
+    public DateTime ServerDateTime => DateTime.UnixEpoch.AddSeconds(ServerTS);
+    public string FullPostId => $"{BoardId}.{ThreadId}.{PostId}";
 }

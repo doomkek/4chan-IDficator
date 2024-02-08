@@ -12,12 +12,15 @@ var config = new ConfigurationBuilder()
         .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
         .Build();
 
+var appConfig = config.GetSection("AppConfig").Get<AppConfig>();
+
 Log.Logger = new LoggerConfiguration()
     .ReadFrom.Configuration(config)
     .CreateLogger();
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddSingleton(c => new DB(c.GetRequiredService<ILogger<DB>>(), "data"));
+builder.Services.AddSingleton<AppConfig>(appConfig);
 
 builder.Host.UseSerilog();
 builder.Services.AddCors(options =>
@@ -33,6 +36,7 @@ builder.Services.AddCors(options =>
 });
 
 builder.Services.AddHostedService<DbMaintenance>();
+builder.Services.AddHostedService<PostValidator>();
 
 var app = builder.Build();
 app.UseCors("Default");
@@ -49,57 +53,17 @@ app.MapPost("/addPost", async (HttpContext context, [FromServices] DB db, [FromQ
 {
     string clientIpAddress = context.Request.Headers["X-Forwarded-For"].FirstOrDefault() ?? context.Connection.RemoteIpAddress!.ToString();
 
-    if (string.IsNullOrEmpty(clientIpAddress))
-        return new ReturnMessage(500, "Failed to retrieve user IP");
-
-    try
-    {
-        IPAddress.Parse(clientIpAddress);
-    }
-    catch
-    {
-        return new ReturnMessage(500, "Failed to parse IP address");
-    }
-
-    int retry = 1;
-    Post post = null;
-    //TODO: insert ID right now, validate later in background task, add new table 'ValidationQueue' with boardId, threadId, postId, postTS    
-    while (retry <= 5)
-    {
-        await Task.Delay(config.GetValue<int>("delayBeforeValidate")); // need to wait before checking 4chan reply since it takes time for new post to appear
-        var resp = await WR.GetRequestAsync<ChanResponse>($"https://a.4cdn.org/{boardId}/thread/{threadId}.json");
-        if (resp == null || resp.IsArchived)
-            return new ReturnMessage(200, "");
-
-        post = resp.posts.SingleOrDefault(p => p.no == postId);
-        if (post == null)
-            Log.Information("Failed to validate post {postId}, retrying {retry}/5", postId, retry);
-        else
-            break;
-
-        retry++;
-    }
-
-    if (post == null)
-        return new ReturnMessage(200, "");
-
-    var postDT = DateTime.UnixEpoch.AddSeconds(post.time);
-    var serverDT = DateTime.UtcNow.AddMilliseconds(-(config.GetValue<int>("delayBeforeValidate") * retry));
-
-    Log.Information("Velidating post {postId}, post DT {postDT:yyyy/MM/dd HH:mm:ss}, server DT {serverDT:yyyy/MM/dd HH:mm:ss}", postId, postDT, serverDT);
-
-    if (serverDT - postDT > TimeSpan.FromSeconds(config.GetValue<int>("postValidInterval")))
-        return new ReturnMessage(200, "");
-
-    string userToken = Utils.GenerateToken(threadId, clientIpAddress, config.GetValue<string>("Secret"));
+    string userToken = Utils.GenerateToken(threadId, clientIpAddress, appConfig.Secret);
     string userHash = Utils.GenerateHash(threadId, userToken);
 
     try
     {
+        await db.ExecuteAsync("INSERT INTO ValidationQueue VALUES (@boardId, @threadId, @postId, @serverTS, @attempt)", new { boardId, threadId, postId, serverTS = DateTimeOffset.UtcNow.ToUnixTimeSeconds(), attempt = 0 });
         await db.ExecuteAsync("INSERT INTO Shitposts VALUES (@threadId, @postId, @boardId, @userHash)", new { threadId, postId, boardId, userHash });
     }
-    catch
+    catch (Exception ex)
     {
+        Log.Error(ex, "Failed to execute SQL in /appPost");
         return new ReturnMessage(500, "");
     }
 
